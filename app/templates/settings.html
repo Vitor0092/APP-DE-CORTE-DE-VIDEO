@@ -1,0 +1,25 @@
+{% extends "base.html" %}{% block body %}
+<h1>Ajustes</h1>{% if request.query_params.get('ok') %}<p class="ok">Salvo.</p>{% endif %}
+<form method="post" action="/settings" class="card stack">
+<h2>Conteúdo</h2>
+<label>Nicho atual<input name="niche" value="{{s.niche}}"></label>
+<label>Estilo do canal (a IA segue isso)<textarea name="channel_style" rows="2">{{s.channel_style}}</textarea></label>
+<label>Idioma<input name="language" value="{{s.language}}"></label>
+<div class="row wrap"><label>Cortes por vídeo<input type="number" name="clips_per_video" value="{{s.clips_per_video}}"></label>
+<label>Duração mín. (s)<input type="number" name="min_clip_seconds" value="{{s.min_clip_seconds}}"></label>
+<label>Duração máx. (s)<input type="number" name="max_clip_seconds" value="{{s.max_clip_seconds}}"></label></div>
+<label class="check"><input type="checkbox" name="voiceover" {{'checked' if s.voiceover=='1'}}> Narração com voz de IA no começo do corte</label>
+<h2>Postagem</h2>
+<label class="check"><input type="checkbox" name="require_approval" {{'checked' if s.require_approval=='1'}}> Exigir minha aprovação antes de postar (recomendado)</label>
+<div class="row">{% for p in platforms %}<label class="check"><input type="checkbox" name="auto_post_platforms" value="{{p}}" {{'checked' if p in s.auto_post_platforms}}> {{p}}</label>{% endfor %}</div>
+<label>Horários de postagem (seu fuso, separados por vírgula)<input name="post_times" value="{{s.post_times}}"></label>
+<div class="row wrap"><label>Privacidade YouTube<select name="youtube_privacy">{% for o in ['public','unlisted','private'] %}<option {{'selected' if (s.youtube_privacy or 'public')==o}}>{{o}}</option>{% endfor %}</select></label>
+<label>Privacidade TikTok<select name="tiktok_privacy">{% for o in ['PUBLIC_TO_EVERYONE','MUTUAL_FOLLOW_FRIENDS','SELF_ONLY'] %}<option {{'selected' if (s.tiktok_privacy or 'PUBLIC_TO_EVERYONE')==o}}>{{o}}</option>{% endfor %}</select></label></div>
+<h2>Descoberta automática</h2>
+<label class="check"><input type="checkbox" name="discovery_enabled" {{'checked' if s.discovery_enabled=='1'}}> Buscar vídeos em alta periodicamente</label>
+<label class="check"><input type="checkbox" name="discovery_auto_create" {{'checked' if s.discovery_auto_create=='1'}}> Criar cortes automaticamente dos melhores</label>
+<label>Palavras-chave (vírgula)<input name="discovery_keywords" value="{{s.discovery_keywords}}"></label>
+<div class="row wrap"><label>Intervalo (min)<input type="number" name="discovery_interval_min" value="{{s.discovery_interval_min}}"></label>
+<label>Velocidade mínima (views/hora)<input type="number" name="discovery_min_velocity" value="{{s.discovery_min_velocity}}"></label></div>
+<button>Salvar</button></form>
+{% endblock %}

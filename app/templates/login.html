@@ -1,0 +1,5 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HypeCut · Entrar</title><link rel="stylesheet" href="/static/style.css"></head><body class="center">
+<form method="post" action="/login" class="card login"><h1>⚡ HypeCut</h1><p class="muted">Acesso exclusivo</p>
+<input type="password" name="password" placeholder="Senha" autofocus required>
+{% if error %}<p class="err">{{error}}</p>{% endif %}<button>Entrar</button></form></body></html>

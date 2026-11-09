@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% block body %}
+<h1>Contas conectadas</h1>
+{% for i in items %}<section class="card"><div class="row"><h2>{{i.name}}</h2>
+{% if i.account %}<span class="ok">● conectado {{i.account.extra.name}}</span>
+<form method="post" action="/accounts/{{i.key}}/disconnect"><button class="sm danger">Desconectar</button></form>
+{% elif i.configured %}<a class="btn" href="/connect/{{i.key}}">Conectar {{i.name}}</a>
+{% else %}<span class="warn">Falta configurar as chaves do app no .env</span>{% endif %}</div>
+<p class="small muted">URL de retorno (cadastre no painel de desenvolvedor): <code>{{i.redirect}}</code></p></section>{% endfor %}
+{% endblock %}

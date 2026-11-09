@@ -1,0 +1,12 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HypeCut</title><link rel="stylesheet" href="/static/style.css"></head><body>
+<nav><a class="logo" href="/">⚡ HypeCut</a>
+<a href="/" class="{{'on' if active=='dashboard'}}">Painel</a>
+<a href="/clips?status=pending" class="{{'on' if active=='clips'}}">Cortes{% if pending %} <b class="badge">{{pending}}</b>{% endif %}</a>
+<a href="/posts" class="{{'on' if active=='posts'}}">Posts</a>
+<a href="/discover" class="{{'on' if active=='discover'}}">Descobrir</a>
+<a href="/goals" class="{{'on' if active=='goals'}}">Metas</a>
+<a href="/accounts" class="{{'on' if active=='accounts'}}">Contas</a>
+<a href="/settings" class="{{'on' if active=='settings'}}">Ajustes</a>
+<a href="/logout" class="right">Sair</a></nav>
+<main>{% block body %}{% endblock %}</main></body></html>

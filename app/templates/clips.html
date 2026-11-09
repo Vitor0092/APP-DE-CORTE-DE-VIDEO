@@ -1,0 +1,34 @@
+{% extends "base.html" %}{% block body %}
+<h1>{{title}}</h1>
+{% if status is not none %}<div class="tabs">
+{% for k,l in [('pending','Aguardando aprovação'),('scheduled','Agendados'),('posted','Postados'),('rendering','Editando'),('error','Com erro'),('rejected','Rejeitados'),('all','Todos')] %}
+<a href="/clips?status={{k}}" class="{{'on' if status==k}}">{{l}}</a>{% endfor %}</div>{% endif %}
+<div class="clips">
+{% for c in clips %}<article class="card clip">
+<div class="player">{% if c.file %}<video src="/clips/{{c.id}}/video" controls preload="metadata"></video>{% else %}<div class="ph">{{c.status}}…</div>{% endif %}</div>
+<div class="meta">
+<div class="row"><span class="tag">{{c.content_type}}</span><span class="score">🔥 {{c.score|int}}</span><span class="st {{c.status}}">{{c.status}}</span></div>
+<p class="muted small">{{c.reason}}</p>{% if c.error %}<p class="err small">{{c.error[:300]}}</p>{% endif %}
+<form method="post" action="/clips/{{c.id}}/edit" class="stack small">
+<label>Título<input name="title" value="{{c.title}}"></label>
+<label>Texto do gancho (tela)<input name="hook" value="{{c.hook}}"></label>
+<label>Narração (voz)<textarea name="voiceover" rows="2">{{c.voiceover}}</textarea></label>
+<details><summary>Legendas dos posts e hashtags</summary>
+<label>YouTube<textarea name="caption_youtube" rows="2">{{c.caption_youtube}}</textarea></label>
+<label>TikTok<textarea name="caption_tiktok" rows="2">{{c.caption_tiktok}}</textarea></label>
+<label>Instagram<textarea name="caption_instagram" rows="3">{{c.caption_instagram}}</textarea></label>
+<label>Hashtags<input name="hashtags" value="{{(c.hashtags|fromjson)|join(' ')}}"></label>
+<div class="row"><label>Início (s)<input name="start" type="number" step="0.1" value="{{c.start}}"></label>
+<label>Fim (s)<input name="end" type="number" step="0.1" value="{{c.end}}"></label></div></details>
+<button class="ghost sm">Salvar (re-edita o vídeo se mudar tempo, gancho ou narração)</button></form>
+{% if c.status in ('pending','approved','error','rejected') and c.file %}
+<form method="post" class="actions"><div class="row small">
+<label><input type="checkbox" name="platforms" value="youtube" checked> YouTube</label>
+<label><input type="checkbox" name="platforms" value="tiktok" checked> TikTok</label>
+<label><input type="checkbox" name="platforms" value="instagram" checked> Instagram</label></div>
+<div class="row"><button formaction="/clips/{{c.id}}/approve">Aprovar e agendar</button>
+<button formaction="/clips/{{c.id}}/post-now" class="ghost">Postar agora</button>
+<button formaction="/clips/{{c.id}}/reject" class="danger">Rejeitar</button></div></form>{% endif %}
+</div></article>
+{% else %}<p class="muted">Nenhum corte aqui.</p>{% endfor %}</div>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block body %}
+<h1>Descobrir vídeos em alta <form method="post" action="/discover/scan" style="display:inline"><button class="sm">Buscar agora</button></form></h1>
+<p class="muted">A plataforma busca no YouTube vídeos recentes das suas palavras-chave (Ajustes), mede a velocidade de views por hora e a IA dá uma nota de potencial de corte. Com "criar cortes automaticamente" ligado, os melhores viram cortes sozinhos.</p>
+{% if error %}<p class="err">{{error}}</p>{% endif %}
+<table><tr><th>Vídeo</th><th>Canal</th><th>Views</th><th>Views/hora</th><th>Nota IA</th><th>Status</th><th></th></tr>
+{% for d in items %}<tr><td class="ellipsis"><a href="https://youtu.be/{{d.video_id}}" target="_blank">{{d.title}}</a></td><td>{{d.channel}}</td>
+<td>{{d.views|fmt}}</td><td>{{d.velocity|fmt}}</td><td>{{d.score|int if d.score else '–'}}</td><td>{{d.status}}</td>
+<td>{% if d.status=='new' %}<form method="post" action="/discover/{{d.video_id}}/create" style="display:inline"><button class="sm">Cortar</button></form>
+<form method="post" action="/discover/{{d.video_id}}/ignore" style="display:inline"><button class="sm ghost">Ignorar</button></form>
+{% elif d.source_id %}<a href="/sources/{{d.source_id}}">ver cortes</a>{% endif %}</td></tr>
+{% else %}<tr><td colspan=7 class="muted">Nada ainda. Clique em "Buscar agora".</td></tr>{% endfor %}</table>
+{% endblock %}

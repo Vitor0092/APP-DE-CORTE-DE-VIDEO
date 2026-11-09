@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block body %}
+<h1>Posts <form method="post" action="/posts/refresh-stats" style="display:inline"><button class="sm ghost">Atualizar métricas</button></form></h1>
+<table><tr><th>Plataforma</th><th>Corte</th><th>Quando</th><th>Status</th><th>Views</th><th>Curtidas</th><th>Coment.</th><th></th></tr>
+{% for p in posts %}<tr><td>{{p.platform}}</td><td class="ellipsis">{% if p.url %}<a href="{{p.url}}" target="_blank">{{p.title}}</a>{% else %}{{p.title}}{% endif %}</td>
+<td><time data-utc="{{p.posted_at or p.scheduled_at}}"></time></td>
+<td><span class="st {{p.status}}">{{p.status}}</span>{% if p.error %}<div class="err small">{{p.error[:200]}}</div>{% endif %}</td>
+<td>{{p.views|fmt}}</td><td>{{p.likes|fmt}}</td><td>{{p.comments|fmt}}</td>
+<td>{% if p.status=='error' %}<form method="post" action="/posts/{{p.id}}/retry"><button class="sm">Repetir</button></form>
+{% elif p.status=='scheduled' %}<form method="post" action="/posts/{{p.id}}/cancel"><button class="sm danger">Cancelar</button></form>{% endif %}</td></tr>
+{% else %}<tr><td colspan=8 class="muted">Nenhum post ainda.</td></tr>{% endfor %}</table>
+<script src="/static/app.js"></script>
+{% endblock %}

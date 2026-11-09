@@ -1,0 +1,42 @@
+{% extends "base.html" %}{% block body %}
+<section class="card"><h2>Novo vídeo para cortar</h2>
+<form method="post" action="/sources" class="stack">
+<textarea name="urls" rows="2" placeholder="Cole um ou mais links (YouTube, TikTok, Instagram, X, Twitch...) — um por linha" required></textarea>
+<input name="notes" placeholder="Opcional: instruções para a IA (ex.: foque no trecho do mapa, tom engraçado)">
+<button>Gerar cortes</button></form></section>
+
+<div class="grid4">
+<div class="card stat"><span>Posts publicados</span><b>{{totals.posts|fmt}}</b></div>
+<div class="card stat"><span>Visualizações</span><b>{{totals.views|fmt}}</b></div>
+<div class="card stat"><span>Curtidas</span><b>{{totals.likes|fmt}}</b></div>
+<div class="card stat"><span>Aguardando aprovação</span><b><a href="/clips?status=pending">{{pending}}</a></b></div>
+</div>
+
+<div class="grid2">
+<section class="card"><h2>Metas <a class="small" href="/goals">ver todas</a></h2>
+{% for g in goals %}<div class="goal"><div>{{g.name}} <span class="muted">({{g.period_label}})</span></div>
+<div class="bar"><i style="width:{{g.pct}}%"></i></div><small>{{g.value|fmt}} / {{g.target|fmt}}</small></div>{% endfor %}
+</section>
+<section class="card"><h2>Contas</h2>
+{% for p,a in accounts.items() %}<div class="row"><b>{{p|capitalize}}</b>
+{% if a %}<span class="ok">● conectado {{a.extra.name}}</span>{% else %}<a href="/accounts" class="warn">conectar</a>{% endif %}</div>{% endfor %}
+<h2 style="margin-top:1rem">Próximos posts</h2>
+{% for p in upcoming %}<div class="row small"><span>{{p.platform}}</span><span class="ellipsis">{{p.title}}</span><time data-utc="{{p.scheduled_at}}"></time></div>
+{% else %}<p class="muted">Nada agendado.</p>{% endfor %}
+</section></div>
+
+<section class="card"><h2>Recomendados agora (em alta) <a class="small" href="/discover">ver mais</a></h2>
+{% for d in top %}<div class="row"><a href="https://youtu.be/{{d.video_id}}" target="_blank" class="ellipsis">{{d.title}}</a>
+<span class="muted">{{d.velocity|fmt}} views/h · nota {{d.score|int if d.score else '–'}}</span>
+<form method="post" action="/discover/{{d.video_id}}/create"><button class="sm">Cortar</button></form></div>
+{% else %}<p class="muted">Configure a YOUTUBE_API_KEY para receber recomendações automáticas.</p>{% endfor %}
+</section>
+
+<section class="card"><h2>Vídeos processados</h2>
+<table><tr><th>Vídeo</th><th>Origem</th><th>Status</th><th>Cortes</th><th></th></tr>
+{% for s in sources %}<tr><td class="ellipsis"><a href="/sources/{{s.id}}">{{s.title or s.url}}</a></td><td>{{s.origin}}</td>
+<td><span class="st {{s.status}}">{{s.step or s.status}}</span>{% if s.error %}<div class="err small">{{s.error[:160]}}</div>{% endif %}</td>
+<td>{{s.n}}</td><td>{% if s.status=='error' %}<form method="post" action="/sources/{{s.id}}/retry"><button class="sm">Tentar de novo</button></form>{% endif %}</td></tr>
+{% else %}<tr><td colspan=5 class="muted">Nenhum vídeo ainda. Cole um link acima.</td></tr>{% endfor %}</table></section>
+<script src="/static/app.js"></script>
+{% endblock %}

@@ -1,0 +1,31 @@
+:root{--bg:#0d0f14;--card:#161a22;--line:#262c38;--txt:#e8ebf1;--mut:#8a93a6;--acc:#ff3d6e;--acc2:#ffb020;--ok:#3ddc84;--err:#ff6b6b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+a{color:var(--acc2);text-decoration:none}h1{font-size:1.5rem;margin:.2rem 0 1rem}h2{font-size:1.05rem;margin:0 0 .7rem}
+nav{display:flex;gap:.2rem;align-items:center;padding:.6rem 1rem;background:#0a0c10;border-bottom:1px solid var(--line);overflow-x:auto;white-space:nowrap}
+nav a{color:var(--mut);padding:.4rem .7rem;border-radius:8px}nav a.on,nav a:hover{color:var(--txt);background:var(--card)}nav .logo{color:var(--acc);font-weight:800;margin-right:.6rem}nav .right{margin-left:auto}
+.badge{background:var(--acc);color:#fff;border-radius:99px;padding:0 .45rem;font-size:.75rem}
+main{max-width:1200px;margin:0 auto;padding:1.2rem 1rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:1rem;margin-bottom:1rem}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem}.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1rem}
+.stat span{color:var(--mut);font-size:.85rem}.stat b{display:block;font-size:1.7rem}
+input,textarea,select{width:100%;background:#0d1017;border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:.55rem .7rem;font:inherit}
+label{display:block;color:var(--mut);font-size:.85rem}label input,label textarea,label select{margin-top:.2rem;color:var(--txt)}
+label.check{display:flex;gap:.5rem;align-items:center;color:var(--txt)}label.check input{width:auto;margin:0}
+button,.btn{background:var(--acc);color:#fff;border:0;border-radius:9px;padding:.55rem 1rem;font:inherit;font-weight:600;cursor:pointer;display:inline-block}
+button.ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}button.danger{background:transparent;border:1px solid var(--err);color:var(--err)}
+button.sm{padding:.3rem .65rem;font-size:.85rem}
+.stack{display:flex;flex-direction:column;gap:.6rem}.row{display:flex;gap:.6rem;align-items:center;justify-content:space-between}.row.wrap{flex-wrap:wrap}.row>label{flex:1}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden}th,td{padding:.55rem .6rem;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--mut);font-weight:500;font-size:.85rem}
+.ellipsis{max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.muted{color:var(--mut)}.small{font-size:.85rem}.err{color:var(--err)}.ok{color:var(--ok)}.warn{color:var(--acc2)}
+.st{font-size:.8rem;padding:.1rem .5rem;border-radius:99px;background:#222836}.st.done,.st.posted{color:var(--ok)}.st.error{color:var(--err)}.st.processing,.st.rendering,.st.posting{color:var(--acc2)}.st.pending{color:#7cc4ff}
+.goal{margin-bottom:.8rem}.bar{height:8px;background:#0d1017;border-radius:99px;overflow:hidden;margin:.3rem 0}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2))}
+.tabs{display:flex;gap:.3rem;margin-bottom:1rem;flex-wrap:wrap}.tabs a{padding:.35rem .8rem;border-radius:99px;border:1px solid var(--line);color:var(--mut)}.tabs a.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.clips{display:grid;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));gap:1rem}
+.clip{display:grid;grid-template-columns:200px 1fr;gap:1rem}.player video,.ph{width:200px;aspect-ratio:9/16;background:#000;border-radius:10px}.ph{display:grid;place-items:center;color:var(--mut)}
+.tag{background:#2a2140;color:#c9b6ff;border-radius:6px;padding:.1rem .45rem;font-size:.8rem}.score{font-weight:700}
+.actions{margin-top:.6rem;display:flex;flex-direction:column;gap:.5rem}.actions label{color:var(--txt)}
+details summary{cursor:pointer;color:var(--acc2);margin:.2rem 0}
+.center{display:grid;place-items:center;min-height:100vh}.login{width:320px;display:flex;flex-direction:column;gap:.7rem;text-align:center}
+code{background:#0d1017;padding:.1rem .4rem;border-radius:6px}
+@media(max-width:640px){.clips{grid-template-columns:1fr}.clip{grid-template-columns:1fr}.player video,.ph{width:100%}}

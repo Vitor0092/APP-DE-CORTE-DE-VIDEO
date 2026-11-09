@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block body %}
+<h1>Metas</h1>
+<section class="card">{% for g in goals %}<div class="goal"><div class="row"><b>{{g.name}}</b><span class="muted">{{g.platform}} · {{g.period_label}}</span>
+<form method="post" action="/goals/{{g.id}}/delete"><button class="sm ghost">remover</button></form></div>
+<div class="bar"><i style="width:{{g.pct}}%"></i></div><small>{{g.value|fmt}} / {{g.target|fmt}} {{g.metric_label}} ({{g.pct}}%)</small></div>{% endfor %}
+<form method="post" action="/goals" class="row wrap" style="margin-top:1rem">
+<input name="name" placeholder="Nome da meta" required>
+<select name="metric"><option value="posts">posts</option><option value="views">visualizações</option><option value="likes">curtidas</option><option value="comments">comentários</option></select>
+<select name="platform"><option value="all">todas</option>{% for p in platforms %}<option>{{p}}</option>{% endfor %}</select>
+<input name="target" type="number" placeholder="Alvo" required>
+<select name="period"><option value="day">por dia</option><option value="week">por semana</option><option value="month">por mês</option></select>
+<button>Adicionar</button></form></section>
+<section class="card"><h2>Tipos de post (mix ideal para o hype do GTA 6)</h2>
+<table><tr><th>Tipo</th><th>Meta do mix</th><th>Atual</th><th>Dica</th></tr>
+{% for m in mix %}<tr><td>{{m.label}}</td><td>{{m.target}}%</td><td>{{m.actual}}%</td><td class="small muted">{{m.tip}}</td></tr>{% endfor %}</table>
+<p class="small muted">Plano sugerido: 3-4 posts/dia por plataforma até o lançamento, priorizando notícias nas primeiras 2 horas após qualquer anúncio. Revise os posts com mais views toda semana e repita o formato que funcionou.</p>
+</section>
+{% endblock %}
