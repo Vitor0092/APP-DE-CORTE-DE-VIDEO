@@ -29,3 +29,4 @@ details summary{cursor:pointer;color:var(--acc2);margin:.2rem 0}
 .center{display:grid;place-items:center;min-height:100vh}.login{width:320px;display:flex;flex-direction:column;gap:.7rem;text-align:center}
 code{background:#0d1017;padding:.1rem .4rem;border-radius:6px}
 @media(max-width:640px){.clips{grid-template-columns:1fr}.clip{grid-template-columns:1fr}.player video,.ph{width:100%}}
+@media(max-width:640px){main{padding:1rem}table{display:block;overflow-x:auto}.ellipsis{max-width:200px}nav .right{margin-left:.5rem}.row{flex-wrap:wrap}}
