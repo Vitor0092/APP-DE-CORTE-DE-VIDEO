@@ -6,7 +6,7 @@ nav a{color:var(--mut);padding:.4rem .7rem;border-radius:8px}nav a.on,nav a:hove
 .badge{background:var(--acc);color:#fff;border-radius:99px;padding:0 .45rem;font-size:.75rem}
 main{max-width:1200px;margin:0 auto;padding:1.2rem 1rem}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:1rem;margin-bottom:1rem}
-.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem}.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1rem}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem}.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1rem}
 .stat span{color:var(--mut);font-size:.85rem}.stat b{display:block;font-size:1.7rem}
 input,textarea,select{width:100%;background:#0d1017;border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:.55rem .7rem;font:inherit}
 label{display:block;color:var(--mut);font-size:.85rem}label input,label textarea,label select{margin-top:.2rem;color:var(--txt)}
