@@ -1,5 +1,6 @@
 """Download a video with yt-dlp (YouTube, TikTok, Instagram, X, Twitch clips...) or use an uploaded file."""
 import re
+import shutil
 from pathlib import Path
 
 import yt_dlp
@@ -36,7 +37,8 @@ def download(url: str, source_id: int) -> dict:
     if url.startswith("file://"):
         path = url[len("file://"):]
         if not Path(path).exists():
-            raise RuntimeError("Arquivo enviado não encontrado no servidor")
+            raise RuntimeError("O arquivo enviado não está mais no servidor (foi apagado para liberar espaço). "
+                               "Envie o arquivo de novo pelo Painel.")
         name = Path(path).stem.split("__", 1)[-1]
         return {"path": path, "title": name, "duration": probe_duration(path), "channel": "", "description": ""}
 
@@ -44,11 +46,20 @@ def download(url: str, source_id: int) -> dict:
     _clear(source_id)
     out = DOWNLOADS / f"src_{source_id}.%(ext)s"
     h = int(db.setting("max_video_height", 720) or 720)
+    # Joining video and audio briefly needs both parts plus the joined copy, so on a small disk pick the best
+    # quality whose size fits (sizes unknown to the site pass: "<?").
+    budget = max(20, int((shutil.disk_usage(DOWNLOADS).free / 1e6 - 60) / 2.4))
+    fit = f"[filesize<?{budget}M][filesize_approx<?{budget}M]"
     extra = {
         "outtmpl": str(out),
-        # Prefer H.264 (cheap to decode) up to the chosen height, then any codec, then whatever exists.
-        "format": (f"bv*[height<={h}][vcodec^=avc1]+ba[ext=m4a]/bv*[height<={h}][ext=mp4]+ba[ext=m4a]/"
-                   f"bv*[height<={h}]+ba/b[height<={h}]/bv*+ba/b"),
+        # Prefer H.264 at up to 30 fps (cheap to decode, small; clips are 30 fps anyway), then any codec.
+        "format": "/".join([
+            f"bv*[height<={h}][fps<=30][vcodec^=avc1]{fit}+ba[ext=m4a]",
+            f"bv*[height<={h}][vcodec^=avc1]{fit}+ba[ext=m4a]",
+            f"bv*[height<={h}]{fit}+ba",
+            f"b[height<={h}]{fit}",
+            f"bv*[height<={h}][fps<=30]+ba", f"bv*[height<={h}]+ba", f"b[height<={h}]", "bv*+ba", "b",
+        ]),
         "merge_output_format": "mp4",
     }
     info, last = None, None

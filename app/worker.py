@@ -1,9 +1,9 @@
 """Background worker: processes videos, posts on schedule, scans trends, refreshes metrics."""
 import json
 import logging
-import re
 import secrets
 import shutil
+import tempfile
 import threading
 import time
 import traceback
@@ -34,8 +34,7 @@ def process_source(src):
     step = lambda s: db.update("sources", sid, status="processing", step=s)  # noqa: E731
 
     step("baixando vídeo")
-    # Little free disk: drop every older original video too, so the new download (and its merge) fits.
-    cleanup_storage(current=sid, keep=1 if disk_free_mb() > 350 else 0)
+    free_up_disk(current=sid)
     info = isolate.run(download.download, src["url"], sid)
     db.update("sources", sid, title=info["title"], video_path=info["path"], duration=info["duration"])
 
@@ -92,27 +91,45 @@ def _rm(path):
         Path(path).unlink(missing_ok=True)
 
 
-def cleanup_storage(current=None, keep=1):
-    """The Railway trial volume has only 500 MB. Keep the newest finished source video (for re-editing),
-    delete the rest, plus leftovers of interrupted downloads and clips that are done with."""
+def cleanup_storage(current=None, keep=1, min_age=600):
+    """The Railway trial volume has only ~450 MB usable. Keep the original video of the newest finished or
+    failed source (to re-edit or retry), delete the other originals, any download leftovers, and clips that are
+    done with. Files younger than min_age seconds are spared, since they may still be uploading or downloading."""
+    busy = {r["id"]: r for r in db.q("SELECT id, url, video_path FROM sources WHERE status IN ('queued','processing')")}
+    if current and current not in busy:
+        busy[current] = db.one("SELECT id, url, video_path FROM sources WHERE id=?", (current,)) or {"id": current}
+    keep_paths = set()
+    for r in busy.values():
+        keep_paths.add(r.get("video_path"))
+        if (r.get("url") or "").startswith("file://"):
+            keep_paths.add(r["url"][len("file://"):])
     kept = 0
-    for r in db.q("SELECT id, status, video_path FROM sources WHERE video_path IS NOT NULL ORDER BY id DESC"):
-        if r["id"] == current or r["status"] in ("queued", "processing"):
+    for r in db.q("SELECT id, video_path FROM sources WHERE video_path IS NOT NULL ORDER BY id DESC"):
+        if r["id"] in busy:
             continue
-        if r["status"] == "done" and kept < keep:
+        if kept < keep and Path(r["video_path"]).exists():
             kept += 1
+            keep_paths.add(r["video_path"])
             continue
         _rm(r["video_path"])
         db.update("sources", r["id"], video_path=None)
-    hour_ago = time.time() - 3600
-    for p in DOWNLOADS.iterdir():
-        if p.is_file() and re.search(r"\.(part|ytdl)$|\.f\d+\.|\.temp\.", p.name) and p.stat().st_mtime < hour_ago:
-            p.unlink(missing_ok=True)
+    too_new = time.time() - min_age
+    busy_prefixes = tuple(f"src_{i}." for i in busy)
+    for f in DOWNLOADS.iterdir():
+        if (f.is_file() and str(f) not in keep_paths and not f.name.endswith(".segments.json")
+                and not f.name.startswith(busy_prefixes) and f.stat().st_mtime < too_new):
+            f.unlink(missing_ok=True)
     cutoff = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat(timespec="seconds")
     for c in db.q("SELECT id, file FROM clips WHERE file IS NOT NULL AND "
                   "(status='rejected' OR (status='posted' AND created_at<?))", (cutoff,)):
         _rm(c["file"])
         db.update("clips", c["id"], file=None)
+
+
+def free_up_disk(current=None, min_age=600):
+    cleanup_storage(current, keep=1, min_age=min_age)
+    if disk_free_mb() < 350:  # not enough room for a new download and its merge: drop the kept original too
+        cleanup_storage(current, keep=0, min_age=min_age)
 
 
 def storage_used_mb() -> int:
@@ -228,7 +245,8 @@ def start():
             "Clique em Tentar de novo; se repetir, tente um vídeo mais curto.",))
     db.run("UPDATE clips SET status='error', error='Edição interrompida pelo reinício do servidor' WHERE status='rendering'")
     db.run("UPDATE posts SET status='scheduled' WHERE status='posting'")
-    du = shutil.disk_usage(DATA_DIR)
-    log.warning("disco %s: %d MB livres de %d MB; arquivos do app: %d MB",
-                DATA_DIR, du.free // 10**6, du.total // 10**6, storage_used_mb())
+    free_up_disk(min_age=0)  # nothing is running yet, so every leftover can go
+    for d in (DATA_DIR, Path(tempfile.gettempdir())):
+        du = shutil.disk_usage(d)
+        log.warning("disco %s: %d MB livres de %d MB", d, du.free // 10**6, du.total // 10**6)
     threading.Thread(target=_loop, daemon=True, name="hypecut-worker").start()
