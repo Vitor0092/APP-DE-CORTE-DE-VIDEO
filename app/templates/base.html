@@ -3,6 +3,7 @@
 <title>HypeCut</title><link rel="stylesheet" href="/static/style.css"></head><body>
 <nav><a class="logo" href="/">⚡ HypeCut</a>
 <a href="/" class="{{'on' if active=='dashboard'}}">Painel</a>
+<a href="/create" class="{{'on' if active=='create'}}">Criar</a>
 <a href="/clips?status=pending" class="{{'on' if active=='clips'}}">Cortes{% if pending %} <b class="badge">{{pending}}</b>{% endif %}</a>
 <a href="/posts" class="{{'on' if active=='posts'}}">Posts</a>
 <a href="/discover" class="{{'on' if active=='discover'}}">Descobrir</a>

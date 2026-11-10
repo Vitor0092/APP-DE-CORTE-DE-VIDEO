@@ -208,8 +208,12 @@ def refresh_stats():
                 db.update("posts", r["id"], **st[r["remote_id"]])
 
 
+QUEUED = ("SELECT 1 FROM sources WHERE status='queued' UNION ALL SELECT 1 FROM library WHERE status='queued' "
+          "UNION ALL SELECT 1 FROM creations WHERE status='queued' LIMIT 1")
+
+
 def _loop():
-    from . import discovery
+    from . import discovery, studio
     last_disc, last_stats = 0.0, 0.0
     while True:
         try:
@@ -220,6 +224,8 @@ def _loop():
                 except Exception as e:
                     traceback.print_exc()
                     db.update("sources", src["id"], status="error", error=str(e)[:1000])
+            else:
+                studio.run_next()
             publish_due()
             interval = int(db.setting("discovery_interval_min", 60)) * 60
             if db.setting("discovery_enabled") == "1" and time.time() - last_disc > interval:
@@ -233,7 +239,7 @@ def _loop():
                 refresh_stats()
         except Exception:
             traceback.print_exc()
-        _wake.wait(5 if db.one("SELECT 1 FROM sources WHERE status='queued'") else 30)
+        _wake.wait(5 if db.one(QUEUED) else 30)
         _wake.clear()
 
 
@@ -245,6 +251,8 @@ def start():
             "Clique em Tentar de novo; se repetir, tente um vídeo mais curto.",))
     db.run("UPDATE clips SET status='error', error='Edição interrompida pelo reinício do servidor' WHERE status='rendering'")
     db.run("UPDATE posts SET status='scheduled' WHERE status='posting'")
+    from . import studio
+    studio.on_startup()
     free_up_disk(min_age=0)  # nothing is running yet, so every leftover can go
     for d in (DATA_DIR, Path(tempfile.gettempdir())):
         du = shutil.disk_usage(d)

@@ -12,7 +12,8 @@ Foco inicial: **GTA 6**.
 4. **Aprovação**: por padrão cada corte espera seu OK em *Cortes*. Você pode editar textos/tempos (o vídeo é re-editado), aprovar, postar agora ou rejeitar. Desligue "Exigir aprovação" em *Ajustes* para postar 100% automático.
 5. **Agenda e posta** nos horários definidos, pelas APIs oficiais de cada rede.
 6. **Descobrir**: a cada X minutos busca vídeos recentes de GTA 6 no YouTube, mede views/hora, a IA dá nota e — se você ligar — já cria os cortes sozinha.
-7. **Metas**: posts por dia por rede, views/curtidas por semana e mês, e o mix ideal de tipos de post (notícia, vazamento, detalhe escondido, comparação, teoria…). Métricas atualizadas a cada 3h.
+7. **Criar vídeo**: você manda um vídeo de exemplo (link ou arquivo); a IA estuda o estilo (fala + imagens), escreve um roteiro novo e seu, narra com voz de IA, escolhe as cenas que combinam com cada fala (do exemplo e da sua **biblioteca de jogatinas**) e monta um vídeo vertical com legendas, que entra em *Cortes* para aprovar e postar.
+8. **Metas**: posts por dia por rede, views/curtidas por semana e mês, e o mix ideal de tipos de post (notícia, vazamento, detalhe escondido, comparação, teoria…). Métricas atualizadas a cada 3h.
 
 ## Como rodar
 
@@ -52,6 +53,7 @@ app/main.py            painel web + login + OAuth
 app/worker.py          fila: processa vídeos, agenda/posta, descoberta, métricas
 app/pipeline/          download, transcrição, IA, voz, edição ffmpeg
 app/publishers/        youtube, tiktok, instagram (APIs oficiais)
+app/studio.py          criar vídeo a partir de um exemplo + biblioteca de cenas
 app/discovery.py       vídeos em alta
 app/goals.py           metas e mix de conteúdo
 ```

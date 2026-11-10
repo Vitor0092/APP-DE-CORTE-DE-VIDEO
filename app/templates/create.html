@@ -1,0 +1,43 @@
+{% extends "base.html" %}{% block body %}
+<h1>Criar vídeo com IA</h1>
+<section class="card"><h2>Novo vídeo</h2>
+<p class="small muted">Mande um vídeo de exemplo. A IA estuda o estilo dele (gancho, ritmo, estrutura), escreve um roteiro novo e seu, narra com voz de IA, escolhe as cenas que combinam com cada fala (do exemplo e da sua biblioteca de jogatinas) e monta o vídeo vertical com legendas. O resultado aparece em <a href="/clips?status=pending">Cortes</a> para você aprovar e postar.</p>
+{% if error %}<p class="err">{{error}}</p>{% endif %}
+<form method="post" action="/create" enctype="multipart/form-data" class="stack">
+<input name="url" placeholder="Link do vídeo de exemplo (YouTube, TikTok, Instagram...)">
+<label class="small">ou envie o arquivo do exemplo<input type="file" name="file" accept="video/*"></label>
+<input name="topic" placeholder="Opcional: sobre o que é o seu vídeo (ex.: 5 detalhes escondidos do mapa do GTA 6)">
+<div class="row wrap">
+<label>Duração<select name="duration">{% for d in [30, 45, 60, 90] %}<option value="{{d}}" {{'selected' if d==60}}>{{d}} segundos</option>{% endfor %}</select></label>
+<label>Voz<select name="voice">{% for v, l in voices %}<option value="{{v}}">{{l}}</option>{% endfor %}</select></label></div>
+<label class="check"><input type="checkbox" name="use_example" checked> Usar cenas do próprio vídeo de exemplo</label>
+<label class="check"><input type="checkbox" name="use_library" checked> Usar minha biblioteca de jogatinas</label>
+<button>Criar vídeo</button></form></section>
+
+<section class="card"><h2>Vídeos criados</h2>
+{% for c in creations %}<div class="item stack">
+<div class="row"><b class="ellipsis">{{c.example_title or c.example_url}}</b><span class="st {{c.status}}">{{c.step or c.status}}</span></div>
+{% if c.topic %}<div class="small muted">Tema: {{c.topic}}</div>{% endif %}
+{% if c.analysis %}<details class="small"><summary>O que a IA aproveitou do exemplo</summary><p class="muted">{{c.analysis}}</p></details>{% endif %}
+{% if c.error %}<div class="err small">{{c.error[:300]}}</div>{% endif %}
+<div class="row" style="justify-content:flex-start">{% if c.clip_id %}<a href="/clips?status=all#c{{c.clip_id}}" class="btn sm">Ver vídeo</a>{% endif %}
+{% if c.status=='error' %}<form method="post" action="/create/{{c.id}}/retry"><button class="sm">Tentar de novo</button></form>{% endif %}
+{% if c.status in ('error','done') %}<form method="post" action="/create/{{c.id}}/delete"><button class="sm ghost">Apagar</button></form>{% endif %}</div></div>
+{% else %}<p class="muted">Nenhum vídeo criado ainda.</p>{% endfor %}</section>
+
+<section class="card stack" id="biblioteca"><h2>Biblioteca de cenas (jogatinas)</h2>
+<p class="small muted">Vídeos que a IA pode usar como cenas nos seus vídeos: suas gravações de gameplay, trailers etc. Prefira suas próprias gravações: cenas de outros canais podem gerar reclamação de direitos autorais. Espaço livre no servidor: <b>{{free_mb}} MB</b>.</p>
+<form method="post" action="/library/upload" enctype="multipart/form-data" class="stack">
+<input type="file" name="files" accept="video/*" multiple required>
+<button class="ghost">Enviar jogatinas</button></form>
+<form method="post" action="/library/link" class="stack">
+<textarea name="urls" rows="2" placeholder="Ou cole links de vídeos para a biblioteca, um por linha" required></textarea>
+<button class="ghost">Adicionar links</button></form>
+<table><tr><th>Vídeo</th><th>Duração</th><th>Tamanho</th><th></th></tr>
+{% for l in library %}<tr><td class="ellipsis">{{l.title}}{% if l.error %}<div class="err small">{{l.error[:200]}}</div>{% endif %}</td>
+<td>{% if l.status=='ready' %}{{(l.duration or 0)|int // 60}}:{{'%02d' % ((l.duration or 0)|int % 60)}}{% else %}<span class="st {{l.status}}">{{l.status}}</span>{% endif %}</td>
+<td>{{l.size_mb or '–'}} MB</td>
+<td><form method="post" action="/library/{{l.id}}/delete"><button class="sm danger">Apagar</button></form></td></tr>
+{% else %}<tr><td colspan=4 class="muted">Biblioteca vazia. Envie suas jogatinas acima.</td></tr>{% endfor %}</table></section>
+<script src="/static/app.js"></script>
+{% endblock %}

@@ -10,8 +10,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import db, discovery, goals, worker
-from .config import ADMIN_PASSWORD, COOKIES_FILE, DOWNLOADS, PLATFORMS, SECRET_KEY
+from . import db, discovery, goals, studio, worker
+from .config import ADMIN_PASSWORD, COOKIES_FILE, DOWNLOADS, LIBRARY, PLATFORMS, SECRET_KEY
 from .publishers import REGISTRY
 
 app = FastAPI(title="HypeCut")
@@ -103,12 +103,15 @@ def upload_source(request: Request, files: list[UploadFile] = File(...), notes: 
     for f in files:
         if not f.filename:
             continue
-        safe = "".join(ch for ch in Path(f.filename).name if ch.isalnum() or ch in "._- ")[:80] or "video.mp4"
-        dest = DOWNLOADS / f"upload_{secrets.token_hex(4)}__{safe}"
-        with dest.open("wb") as out:
-            shutil.copyfileobj(f.file, out, 1024 * 1024)
+        dest = DOWNLOADS / f"upload_{secrets.token_hex(4)}__{studio.safe_name(f.filename)}"
+        _save(f, dest)
         worker.enqueue_source(f"file://{dest}", origin="upload", notes=notes)
     return RedirectResponse("/", 303)
+
+
+def _save(f: UploadFile, dest: Path):
+    with dest.open("wb") as out:
+        shutil.copyfileobj(f.file, out, 1024 * 1024)
 
 
 @app.post("/sources/{sid}/retry")
@@ -129,7 +132,7 @@ def source_detail(request: Request, sid: int):
 @app.get("/clips")
 def clips(request: Request, status: str = "pending"):
     where = "" if status == "all" else "WHERE c.status=?"
-    rows = db.q(f"SELECT c.*, s.title src_title FROM clips c JOIN sources s ON s.id=c.source_id {where} "
+    rows = db.q(f"SELECT c.*, s.title src_title FROM clips c LEFT JOIN sources s ON s.id=c.source_id {where} "
                 f"ORDER BY c.id DESC LIMIT 100", () if status == "all" else (status,))
     return page(request, "clips", title="Cortes", clips=rows, status=status, source=None)
 
@@ -172,9 +175,15 @@ def reject(request: Request, cid: int):
 @app.post("/clips/{cid}/edit")
 def edit_clip(request: Request, cid: int, title: str = Form(...), hook: str = Form(""), voiceover: str = Form(""),
               caption_youtube: str = Form(""), caption_tiktok: str = Form(""), caption_instagram: str = Form(""),
-              hashtags: str = Form(""), start: float = Form(...), end: float = Form(...)):
+              hashtags: str = Form(""), start: float = Form(None), end: float = Form(None)):
     old = db.one("SELECT * FROM clips WHERE id=?", (cid,))
     tags = [t if t.startswith("#") else f"#{t}" for t in hashtags.replace(",", " ").split()]
+    if old["creation_id"]:  # AI-created video: only the texts of the posts change
+        db.update("clips", cid, title=title, caption_youtube=caption_youtube, caption_tiktok=caption_tiktok,
+                  caption_instagram=caption_instagram, hashtags=json.dumps(tags, ensure_ascii=False))
+        return back(request)
+    start = old["start"] if start is None else start
+    end = old["end"] if end is None else end
     db.update("clips", cid, title=title, hook=hook, voiceover=voiceover, caption_youtube=caption_youtube,
               caption_tiktok=caption_tiktok, caption_instagram=caption_instagram,
               hashtags=json.dumps(tags, ensure_ascii=False), start=start, end=end)
@@ -183,6 +192,78 @@ def edit_clip(request: Request, cid: int, title: str = Form(...), hook: str = Fo
         import threading
         threading.Thread(target=worker.render, args=(cid,), daemon=True).start()
     return back(request)
+
+
+# ---------- create (studio) ----------
+VOICES = [("pt-BR-AntonioNeural", "Antonio (masculina)"), ("pt-BR-FranciscaNeural", "Francisca (feminina)")]
+
+
+@app.get("/create")
+def create_page(request: Request, erro: str = ""):
+    return page(request, "create", library=db.q("SELECT * FROM library ORDER BY id DESC"),
+                creations=db.q("SELECT * FROM creations ORDER BY id DESC LIMIT 30"), voices=VOICES,
+                free_mb=worker.disk_free_mb(), error=erro)
+
+
+@app.post("/create")
+def create_video(request: Request, url: str = Form(""), file: UploadFile = File(None), topic: str = Form(""),
+                 duration: int = Form(60), voice: str = Form(VOICES[0][0]), use_example: str = Form(""),
+                 use_library: str = Form("")):
+    has_file = bool(file and file.filename)
+    url = url.strip()
+    if not url.startswith("http") and not has_file:
+        return RedirectResponse("/create?erro=Cole o link do vídeo de exemplo ou envie o arquivo.", 303)
+    cid = db.run("INSERT INTO creations(example_url,topic,duration,voice,use_example,use_library,status,step,created_at) "
+                 "VALUES (?,?,?,?,?,?,'uploading','enviando',?)",
+                 (url, topic.strip(), max(15, min(duration, 180)), voice if voice in dict(VOICES) else VOICES[0][0],
+                  1 if use_example else 0, 1 if use_library else 0, db.now()))
+    if has_file:
+        work = studio.workdir(cid)
+        work.mkdir(parents=True, exist_ok=True)
+        dest = work / f"upload__{studio.safe_name(file.filename)}"
+        _save(file, dest)
+        url = f"file://{dest}"
+    db.update("creations", cid, example_url=url, status="queued", step="na fila")
+    worker._wake.set()
+    return RedirectResponse("/create", 303)
+
+
+@app.post("/create/{cid}/retry")
+def retry_creation(request: Request, cid: int):
+    db.update("creations", cid, status="queued", step="na fila", error=None)
+    worker._wake.set()
+    return RedirectResponse("/create", 303)
+
+
+@app.post("/create/{cid}/delete")
+def delete_creation(request: Request, cid: int):
+    studio.delete_creation(cid)
+    return RedirectResponse("/create", 303)
+
+
+@app.post("/library/upload")
+def library_upload(request: Request, files: list[UploadFile] = File(...)):
+    for f in files:
+        if f.filename:
+            dest = LIBRARY / f"upload_{secrets.token_hex(4)}__{studio.safe_name(f.filename)}"
+            _save(f, dest)
+            studio.add_library_file(dest, Path(f.filename).stem)
+    return RedirectResponse("/create#biblioteca", 303)
+
+
+@app.post("/library/link")
+def library_link(request: Request, urls: str = Form(...)):
+    for u in urls.split():
+        if u.startswith("http"):
+            studio.add_library_link(u)
+    worker._wake.set()
+    return RedirectResponse("/create#biblioteca", 303)
+
+
+@app.post("/library/{lid}/delete")
+def library_delete(request: Request, lid: int):
+    studio.delete_library(lid)
+    return RedirectResponse("/create#biblioteca", 303)
 
 
 # ---------- posts ----------

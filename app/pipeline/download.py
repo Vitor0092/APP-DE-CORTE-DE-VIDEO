@@ -19,8 +19,8 @@ DISK_FULL = ("Faltou espaço em disco no servidor para juntar o vídeo e o áudi
              "Ajustes (ou use um vídeo mais curto, ou envie o arquivo direto) e clique em Tentar de novo.")
 
 
-def _clear(source_id):
-    for old in DOWNLOADS.glob(f"src_{source_id}.*"):
+def _clear(source_id, folder=DOWNLOADS):
+    for old in Path(folder).glob(f"src_{source_id}.*"):
         if not old.name.endswith(".segments.json"):
             old.unlink(missing_ok=True)
 
@@ -33,7 +33,8 @@ def _opts(extra=None, cookies=True):
     return o
 
 
-def download(url: str, source_id: int) -> dict:
+def download(url: str, source_id, folder=None) -> dict:
+    folder = Path(folder or DOWNLOADS)
     if url.startswith("file://"):
         path = url[len("file://"):]
         if not Path(path).exists():
@@ -43,12 +44,12 @@ def download(url: str, source_id: int) -> dict:
         return {"path": path, "title": name, "duration": probe_duration(path), "channel": "", "description": ""}
 
     # Leftovers from an interrupted run (e.g. a video-only "src_1.f137.mp4" part) must not be picked up later.
-    _clear(source_id)
-    out = DOWNLOADS / f"src_{source_id}.%(ext)s"
+    _clear(source_id, folder)
+    out = folder / f"src_{source_id}.%(ext)s"
     h = int(db.setting("max_video_height", 720) or 720)
     # Joining video and audio briefly needs both parts plus the joined copy, so on a small disk pick the best
     # quality whose size fits (sizes unknown to the site pass: "<?").
-    budget = max(20, int((shutil.disk_usage(DOWNLOADS).free / 1e6 - 60) / 2.4))
+    budget = max(20, int((shutil.disk_usage(folder).free / 1e6 - 60) / 2.4))
     fit = f"[filesize<?{budget}M][filesize_approx<?{budget}M]"
     extra = {
         "outtmpl": str(out),
@@ -74,7 +75,7 @@ def download(url: str, source_id: int) -> dict:
             if "Requested format is not available" not in str(e) or not COOKIES_FILE.exists():
                 break
     if info is None:
-        _clear(source_id)  # a failed merge leaves big parts behind on a small disk
+        _clear(source_id, folder)  # a failed merge leaves big parts behind on a small disk
         msg = str(last)
         if "Conversion failed" in msg or "No space left" in msg:
             raise RuntimeError(DISK_FULL) from last
@@ -86,7 +87,7 @@ def download(url: str, source_id: int) -> dict:
             raise RuntimeError("O YouTube não liberou nenhum formato de vídeo para o servidor. Tente de novo em alguns "
                                "minutos, atualize os cookies em Ajustes ou envie o arquivo do vídeo direto.") from last
         raise last
-    path = _final_path(info, source_id)
+    path = _final_path(info, source_id, folder)
     return {
         "path": str(path),
         "title": info.get("title") or url,
@@ -96,14 +97,14 @@ def download(url: str, source_id: int) -> dict:
     }
 
 
-def _final_path(info: dict, source_id: int) -> Path:
+def _final_path(info: dict, source_id, folder=DOWNLOADS) -> Path:
     """The merged file yt-dlp produced, never an intermediate video-only/audio-only part."""
     for d in info.get("requested_downloads") or []:
         fp = d.get("filepath")
         if fp and Path(fp).exists():
             return Path(fp)
     final = re.compile(rf"^src_{source_id}\.(mp4|mkv|webm|mov)$")
-    candidates = sorted((p for p in DOWNLOADS.glob(f"src_{source_id}.*") if final.match(p.name)),
+    candidates = sorted((p for p in Path(folder).glob(f"src_{source_id}.*") if final.match(p.name)),
                         key=lambda p: p.suffix != ".mp4")
     if not candidates:
         raise RuntimeError("Download terminou mas o arquivo final do vídeo não foi encontrado")

@@ -30,6 +30,13 @@ CREATE TABLE IF NOT EXISTS accounts (
   expires_at REAL, extra TEXT, connected_at TEXT);
 CREATE TABLE IF NOT EXISTS goals (
   id INTEGER PRIMARY KEY, name TEXT, metric TEXT, platform TEXT, target REAL, period TEXT);
+CREATE TABLE IF NOT EXISTS library (
+  id INTEGER PRIMARY KEY, title TEXT, url TEXT, path TEXT, duration REAL, size_mb REAL,
+  status TEXT DEFAULT 'queued', error TEXT, created_at TEXT);
+CREATE TABLE IF NOT EXISTS creations (
+  id INTEGER PRIMARY KEY, example_url TEXT, example_title TEXT, topic TEXT, duration INTEGER, voice TEXT,
+  use_example INTEGER, use_library INTEGER, status TEXT DEFAULT 'queued', step TEXT, error TEXT,
+  analysis TEXT, clip_id INTEGER, created_at TEXT);
 CREATE TABLE IF NOT EXISTS discoveries (
   video_id TEXT PRIMARY KEY, title TEXT, channel TEXT, views INTEGER, published_at TEXT,
   velocity REAL, score REAL, status TEXT DEFAULT 'new', source_id INTEGER, found_at TEXT);
@@ -77,6 +84,8 @@ def conn():
 def init():
     with _lock, conn() as c:
         c.executescript(SCHEMA)
+        if "creation_id" not in {r[1] for r in c.execute("PRAGMA table_info(clips)")}:
+            c.execute("ALTER TABLE clips ADD COLUMN creation_id INTEGER")
         for k, v in DEFAULT_SETTINGS.items():
             c.execute("INSERT OR IGNORE INTO settings VALUES (?,?)", (k, v))
         # Old defaults spent the whole free YouTube quota (10k units/day): each search costs 100.

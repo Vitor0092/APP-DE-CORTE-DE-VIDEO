@@ -19,7 +19,9 @@ DATA_DIR = Path(os.getenv("DATA_DIR", BASE_DIR / "data"))
 DOWNLOADS = DATA_DIR / "downloads"
 CLIPS = DATA_DIR / "clips"
 COOKIES_FILE = DATA_DIR / "cookies.txt"
-for d in (DATA_DIR, DOWNLOADS, CLIPS):
+LIBRARY = DATA_DIR / "library"  # gameplay/footage the AI can use in created videos
+STUDIO = DATA_DIR / "studio"    # working files of videos being created
+for d in (DATA_DIR, DOWNLOADS, CLIPS, LIBRARY, STUDIO):
     d.mkdir(parents=True, exist_ok=True)
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin")
