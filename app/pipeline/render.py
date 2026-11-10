@@ -93,12 +93,13 @@ def render_clip(clip_id: int, src: str, segments: list, start: float, end: float
 
     vf = (
         f"[0:v]split[a][b];"
-        f"[a]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},boxblur=25:4,eq=brightness=-0.15[bg];"
+        f"[a]scale=270:480:force_original_aspect_ratio=increase,crop=270:480,boxblur=8:2,"
+        f"scale={W}:{H},eq=brightness=-0.15[bg];"
         f"[b]scale={W}:-2[fg];"
         f"[bg][fg]overlay=(W-w)/2:(H-h)/2,ass=subs.ass[v]"
     )
     src_audio = has_audio(src)
-    cmd = ["ffmpeg", "-y", "-ss", f"{start:.2f}", "-to", f"{end:.2f}", "-i", src]
+    cmd = ["ffmpeg", "-y", "-threads", "2", "-ss", f"{start:.2f}", "-to", f"{end:.2f}", "-i", src]
     if vo_path:
         cmd += ["-i", vo_path]
     if vo_path and src_audio:

@@ -8,6 +8,7 @@
 <div class="row wrap"><label>Cortes por vídeo<input type="number" name="clips_per_video" value="{{s.clips_per_video}}"></label>
 <label>Duração mín. (s)<input type="number" name="min_clip_seconds" value="{{s.min_clip_seconds}}"></label>
 <label>Duração máx. (s)<input type="number" name="max_clip_seconds" value="{{s.max_clip_seconds}}"></label></div>
+<label>Qualidade máxima do download<select name="max_video_height">{% for o in ['480','720','1080'] %}<option value="{{o}}" {{'selected' if (s.max_video_height or '720')==o}}>{{o}}p</option>{% endfor %}</select></label>
 <label class="check"><input type="checkbox" name="voiceover" {{'checked' if s.voiceover=='1'}}> Narração com voz de IA no começo do corte</label>
 <h2>Postagem</h2>
 <label class="check"><input type="checkbox" name="require_approval" {{'checked' if s.require_approval=='1'}}> Exigir minha aprovação antes de postar (recomendado)</label>
@@ -22,6 +23,9 @@
 <div class="row wrap"><label>Intervalo (min) <span class="small">— cada busca gasta 100 da cota grátis de 10.000/dia por palavra-chave; um upload gasta 1.600</span><input type="number" name="discovery_interval_min" value="{{s.discovery_interval_min}}"></label>
 <label>Velocidade mínima (views/hora)<input type="number" name="discovery_min_velocity" value="{{s.discovery_min_velocity}}"></label></div>
 <button>Salvar</button></form>
+<section class="card stack"><h2>Espaço em disco</h2>
+<p class="small">Arquivos da plataforma: <b>{{storage_mb}} MB</b> · Livre: <b>{{free_mb}} MB</b>. No plano de teste do Railway o disco tem 500 MB. Vídeos antigos, cortes rejeitados e cortes já postados há mais de 2 dias são apagados automaticamente.</p>
+<form method="post" action="/settings/cleanup"><button class="sm ghost">Limpar vídeos originais agora</button></form></section>
 <section class="card stack" id="cookies"><h2>Login do YouTube (cookies)</h2>
 <p class="small muted">O YouTube às vezes bloqueia downloads feitos por servidores ("confirm you're not a bot"). Para liberar, envie os cookies de uma conta do YouTube.
 Use de preferência uma <b>conta secundária</b>.</p>

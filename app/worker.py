@@ -1,14 +1,17 @@
 """Background worker: processes videos, posts on schedule, scans trends, refreshes metrics."""
 import json
 import logging
+import re
 import secrets
+import shutil
 import threading
 import time
 import traceback
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
-from . import db
-from .config import DOWNLOADS
+from . import db, isolate
+from .config import DATA_DIR, DOWNLOADS
 
 log = logging.getLogger("hypecut.worker")
 _wake = threading.Event()
@@ -31,11 +34,13 @@ def process_source(src):
     step = lambda s: db.update("sources", sid, status="processing", step=s)  # noqa: E731
 
     step("baixando vídeo")
-    info = download.download(src["url"], sid)
+    # Little free disk: drop every older original video too, so the new download (and its merge) fits.
+    cleanup_storage(current=sid, keep=1 if disk_free_mb() > 350 else 0)
+    info = isolate.run(download.download, src["url"], sid)
     db.update("sources", sid, title=info["title"], video_path=info["path"], duration=info["duration"])
 
     step("transcrevendo áudio")
-    segs = transcribe.transcribe(info["path"])
+    segs = isolate.run(transcribe.transcribe, info["path"])
     _segments_path(sid).write_text(json.dumps(segs, ensure_ascii=False))
     if not segs:
         step("sem fala no vídeo: a IA vai narrar os cortes")
@@ -59,13 +64,20 @@ def process_source(src):
 
 
 def render(clip_id):
+    from .pipeline import download
     from .pipeline import render as r
     c = db.one("SELECT * FROM clips WHERE id=?", (clip_id,))
     src = db.one("SELECT * FROM sources WHERE id=?", (c["source_id"],))
     try:
         segs = json.loads(_segments_path(src["id"]).read_text())
-        path = r.render_clip(clip_id, src["video_path"], segs, c["start"], c["end"], c["hook"], c["voiceover"],
-                             use_voice=db.setting("voiceover") == "1")
+        video = src["video_path"]
+        if not video or not Path(video).exists():  # removed earlier to free disk space
+            if not src["url"].startswith("http"):
+                raise RuntimeError("O vídeo original foi apagado para liberar espaço. Envie o arquivo de novo.")
+            video = isolate.run(download.download, src["url"], src["id"])["path"]
+            db.update("sources", src["id"], video_path=video)
+        path = isolate.run(r.render_clip, clip_id, video, segs, c["start"], c["end"], c["hook"], c["voiceover"],
+                           use_voice=db.setting("voiceover") == "1")
         if db.setting("require_approval") == "1":
             db.update("clips", clip_id, file=path, status="pending", error=None)
         else:
@@ -73,6 +85,42 @@ def render(clip_id):
             schedule_posts(clip_id)
     except Exception as e:
         db.update("clips", clip_id, status="error", error=str(e)[:1000])
+
+
+def _rm(path):
+    if path:
+        Path(path).unlink(missing_ok=True)
+
+
+def cleanup_storage(current=None, keep=1):
+    """The Railway trial volume has only 500 MB. Keep the newest finished source video (for re-editing),
+    delete the rest, plus leftovers of interrupted downloads and clips that are done with."""
+    kept = 0
+    for r in db.q("SELECT id, status, video_path FROM sources WHERE video_path IS NOT NULL ORDER BY id DESC"):
+        if r["id"] == current or r["status"] in ("queued", "processing"):
+            continue
+        if r["status"] == "done" and kept < keep:
+            kept += 1
+            continue
+        _rm(r["video_path"])
+        db.update("sources", r["id"], video_path=None)
+    hour_ago = time.time() - 3600
+    for p in DOWNLOADS.iterdir():
+        if p.is_file() and re.search(r"\.(part|ytdl)$|\.f\d+\.|\.temp\.", p.name) and p.stat().st_mtime < hour_ago:
+            p.unlink(missing_ok=True)
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat(timespec="seconds")
+    for c in db.q("SELECT id, file FROM clips WHERE file IS NOT NULL AND "
+                  "(status='rejected' OR (status='posted' AND created_at<?))", (cutoff,)):
+        _rm(c["file"])
+        db.update("clips", c["id"], file=None)
+
+
+def storage_used_mb() -> int:
+    return round(sum(p.stat().st_size for p in DATA_DIR.rglob("*") if p.is_file()) / 1e6)
+
+
+def disk_free_mb() -> int:
+    return round(shutil.disk_usage(DATA_DIR).free / 1e6)
 
 
 def _next_slot(platform):
@@ -180,4 +228,7 @@ def start():
             "Clique em Tentar de novo; se repetir, tente um vídeo mais curto.",))
     db.run("UPDATE clips SET status='error', error='Edição interrompida pelo reinício do servidor' WHERE status='rendering'")
     db.run("UPDATE posts SET status='scheduled' WHERE status='posting'")
+    du = shutil.disk_usage(DATA_DIR)
+    log.warning("disco %s: %d MB livres de %d MB; arquivos do app: %d MB",
+                DATA_DIR, du.free // 10**6, du.total // 10**6, storage_used_mb())
     threading.Thread(target=_loop, daemon=True, name="hypecut-worker").start()

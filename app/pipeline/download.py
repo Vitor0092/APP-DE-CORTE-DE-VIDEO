@@ -4,6 +4,7 @@ from pathlib import Path
 
 import yt_dlp
 
+from .. import db
 from ..config import COOKIES_FILE, DOWNLOADS
 from .media import probe_duration
 
@@ -13,6 +14,15 @@ BOT_HINT = ("O YouTube bloqueou o download pelo servidor. Envie seu cookies.txt 
 COOKIES_EXPIRED = ("O YouTube recusou os cookies enviados (eles foram trocados pelo navegador). Exporte de novo "
                    "usando uma janela anônima, como explicado em Ajustes, e clique em Tentar de novo.")
 
+DISK_FULL = ("Faltou espaço em disco no servidor para juntar o vídeo e o áudio. Escolha a qualidade 480p em "
+             "Ajustes (ou use um vídeo mais curto, ou envie o arquivo direto) e clique em Tentar de novo.")
+
+
+def _clear(source_id):
+    for old in DOWNLOADS.glob(f"src_{source_id}.*"):
+        if not old.name.endswith(".segments.json"):
+            old.unlink(missing_ok=True)
+
 
 def _opts(extra=None, cookies=True):
     o = {"quiet": True, "noplaylist": True}
@@ -20,8 +30,6 @@ def _opts(extra=None, cookies=True):
         o["cookiefile"] = str(COOKIES_FILE)
     o.update(extra or {})
     return o
-
-
 
 
 def download(url: str, source_id: int) -> dict:
@@ -33,14 +41,14 @@ def download(url: str, source_id: int) -> dict:
         return {"path": path, "title": name, "duration": probe_duration(path), "channel": "", "description": ""}
 
     # Leftovers from an interrupted run (e.g. a video-only "src_1.f137.mp4" part) must not be picked up later.
-    for old in DOWNLOADS.glob(f"src_{source_id}.*"):
-        if not old.name.endswith(".segments.json"):
-            old.unlink(missing_ok=True)
+    _clear(source_id)
     out = DOWNLOADS / f"src_{source_id}.%(ext)s"
+    h = int(db.setting("max_video_height", 720) or 720)
     extra = {
         "outtmpl": str(out),
-        # Prefer mp4 up to 1080p, then anything up to 1080p, then whatever exists.
-        "format": "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/bv*[height<=1080]+ba/b[height<=1080]/bv*+ba/b",
+        # Prefer H.264 (cheap to decode) up to the chosen height, then any codec, then whatever exists.
+        "format": (f"bv*[height<={h}][vcodec^=avc1]+ba[ext=m4a]/bv*[height<={h}][ext=mp4]+ba[ext=m4a]/"
+                   f"bv*[height<={h}]+ba/b[height<={h}]/bv*+ba/b"),
         "merge_output_format": "mp4",
     }
     info, last = None, None
@@ -55,7 +63,10 @@ def download(url: str, source_id: int) -> dict:
             if "Requested format is not available" not in str(e) or not COOKIES_FILE.exists():
                 break
     if info is None:
+        _clear(source_id)  # a failed merge leaves big parts behind on a small disk
         msg = str(last)
+        if "Conversion failed" in msg or "No space left" in msg:
+            raise RuntimeError(DISK_FULL) from last
         if "not a bot" in msg or "Sign in to confirm" in msg:
             if COOKIES_FILE.exists():
                 raise RuntimeError(COOKIES_EXPIRED) from last

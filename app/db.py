@@ -49,6 +49,7 @@ DEFAULT_SETTINGS = {
     "min_clip_seconds": "20",
     "max_clip_seconds": "59",
     "voiceover": "1",
+    "max_video_height": "720",
     "language": "pt-BR",
     "channel_style": "Canal brasileiro de notícias e curiosidades de GTA 6. Tom animado, direto, com opinião própria.",
 }

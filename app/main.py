@@ -312,7 +312,13 @@ def settings(request: Request):
         from datetime import datetime
         cookies = datetime.fromtimestamp(COOKIES_FILE.stat().st_mtime).strftime("%d/%m/%Y %H:%M")
     return page(request, "settings", s={k: db.setting(k, "") for k in SETTING_KEYS}, platforms=PLATFORMS,
-                cookies=cookies)
+                cookies=cookies, storage_mb=worker.storage_used_mb(), free_mb=worker.disk_free_mb())
+
+
+@app.post("/settings/cleanup")
+def cleanup(request: Request):
+    worker.cleanup_storage(keep=0)
+    return RedirectResponse("/settings?ok=1", 303)
 
 
 @app.post("/settings")
