@@ -172,6 +172,16 @@ def reject(request: Request, cid: int):
     return back(request)
 
 
+@app.post("/clips/{cid}/delete")
+def delete_clip(request: Request, cid: int):
+    c = db.one("SELECT file FROM clips WHERE id=?", (cid,))
+    if c and c["file"]:
+        Path(c["file"]).unlink(missing_ok=True)
+    db.run("DELETE FROM posts WHERE clip_id=? AND status!='posted'", (cid,))
+    db.run("DELETE FROM clips WHERE id=?", (cid,))
+    return back(request)
+
+
 @app.post("/clips/{cid}/edit")
 def edit_clip(request: Request, cid: int, title: str = Form(...), hook: str = Form(""), voiceover: str = Form(""),
               caption_youtube: str = Form(""), caption_tiktok: str = Form(""), caption_instagram: str = Form(""),

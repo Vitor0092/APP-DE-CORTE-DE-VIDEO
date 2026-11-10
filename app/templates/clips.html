@@ -30,6 +30,7 @@
 <div class="row"><button formaction="/clips/{{c.id}}/approve">Aprovar e agendar</button>
 <button formaction="/clips/{{c.id}}/post-now" class="ghost">Postar agora</button>
 <button formaction="/clips/{{c.id}}/reject" class="danger">Rejeitar</button></div></form>{% endif %}
+{% if c.status in ('rejected','error') %}<form method="post" action="/clips/{{c.id}}/delete"><button class="sm ghost">Apagar de vez</button></form>{% endif %}
 </div></article>
 {% else %}<p class="muted">Nenhum corte aqui.</p>{% endfor %}</div>
 {% endblock %}
