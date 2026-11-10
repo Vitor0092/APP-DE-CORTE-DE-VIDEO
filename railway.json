@@ -1,1 +1,1 @@
-{"build":{"builder":"DOCKERFILE"},"deploy":{"restartPolicyType":"ALWAYS"}}
+{"build":{"builder":"DOCKERFILE"},"deploy":{"restartPolicyType":"ALWAYS","healthcheckPath":"/healthz","healthcheckTimeout":120}}
