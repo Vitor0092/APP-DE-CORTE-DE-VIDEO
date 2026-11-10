@@ -37,10 +37,12 @@ def process_source(src):
     step("transcrevendo áudio")
     segs = transcribe.transcribe(info["path"])
     _segments_path(sid).write_text(json.dumps(segs, ensure_ascii=False))
+    if not segs:
+        step("sem fala no vídeo: a IA vai narrar os cortes")
 
     step("IA escolhendo momentos virais")
     title = info["title"] + (f" | Observações: {src['notes']}" if src.get("notes") else "")
-    ideas = analyze.pick_clips(title, segs, info["duration"])
+    ideas = analyze.pick_clips(title, segs, info["duration"], info.get("description", ""))
 
     for i, c in enumerate(ideas, 1):
         step(f"editando corte {i}/{len(ideas)}")

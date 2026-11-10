@@ -1,10 +1,11 @@
 """Download a video with yt-dlp (YouTube, TikTok, Instagram, X, Twitch clips...) or use an uploaded file."""
-import subprocess
+import re
 from pathlib import Path
 
 import yt_dlp
 
 from ..config import COOKIES_FILE, DOWNLOADS
+from .media import probe_duration
 
 BOT_HINT = ("O YouTube bloqueou o download pelo servidor. Envie seu cookies.txt em Ajustes "
             "(ou envie o arquivo do vídeo direto no Painel) e clique em Tentar de novo.")
@@ -21,13 +22,6 @@ def _opts(extra=None, cookies=True):
     return o
 
 
-def _probe_duration(path: str) -> float:
-    out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path],
-                         capture_output=True, text=True).stdout.strip()
-    try:
-        return float(out)
-    except ValueError:
-        return 0.0
 
 
 def download(url: str, source_id: int) -> dict:
@@ -36,8 +30,12 @@ def download(url: str, source_id: int) -> dict:
         if not Path(path).exists():
             raise RuntimeError("Arquivo enviado não encontrado no servidor")
         name = Path(path).stem.split("__", 1)[-1]
-        return {"path": path, "title": name, "duration": _probe_duration(path), "channel": "", "description": ""}
+        return {"path": path, "title": name, "duration": probe_duration(path), "channel": "", "description": ""}
 
+    # Leftovers from an interrupted run (e.g. a video-only "src_1.f137.mp4" part) must not be picked up later.
+    for old in DOWNLOADS.glob(f"src_{source_id}.*"):
+        if not old.name.endswith(".segments.json"):
+            old.unlink(missing_ok=True)
     out = DOWNLOADS / f"src_{source_id}.%(ext)s"
     extra = {
         "outtmpl": str(out),
@@ -66,14 +64,28 @@ def download(url: str, source_id: int) -> dict:
             raise RuntimeError("O YouTube não liberou nenhum formato de vídeo para o servidor. Tente de novo em alguns "
                                "minutos, atualize os cookies em Ajustes ou envie o arquivo do vídeo direto.") from last
         raise last
-    path = next(DOWNLOADS.glob(f"src_{source_id}.*"))
+    path = _final_path(info, source_id)
     return {
         "path": str(path),
         "title": info.get("title") or url,
-        "duration": info.get("duration") or _probe_duration(str(path)),
+        "duration": info.get("duration") or probe_duration(str(path)),
         "channel": info.get("uploader") or "",
         "description": (info.get("description") or "")[:2000],
     }
+
+
+def _final_path(info: dict, source_id: int) -> Path:
+    """The merged file yt-dlp produced, never an intermediate video-only/audio-only part."""
+    for d in info.get("requested_downloads") or []:
+        fp = d.get("filepath")
+        if fp and Path(fp).exists():
+            return Path(fp)
+    final = re.compile(rf"^src_{source_id}\.(mp4|mkv|webm|mov)$")
+    candidates = sorted((p for p in DOWNLOADS.glob(f"src_{source_id}.*") if final.match(p.name)),
+                        key=lambda p: p.suffix != ".mp4")
+    if not candidates:
+        raise RuntimeError("Download terminou mas o arquivo final do vídeo não foi encontrado")
+    return candidates[0]
 
 
 def fetch_info(url: str) -> dict:

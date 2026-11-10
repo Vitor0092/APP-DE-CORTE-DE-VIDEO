@@ -39,7 +39,7 @@ def _client():
     return anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 
-def pick_clips(title: str, segments: list[dict], duration: float) -> list[dict]:
+def pick_clips(title: str, segments: list[dict], duration: float, description: str = "") -> list[dict]:
     n = int(db.setting("clips_per_video", 5))
     mn, mx = int(db.setting("min_clip_seconds", 20)), int(db.setting("max_clip_seconds", 59))
     transcript = "\n".join(f"[{s['start']:.1f}-{s['end']:.1f}] {s['text']}" for s in segments)
@@ -53,10 +53,17 @@ def pick_clips(title: str, segments: list[dict], duration: float) -> list[dict]:
         "nunca apenas reposte o conteúdo. Legendas de post: TikTok curta e provocativa com pergunta para comentários; "
         "Instagram com 2-3 linhas e CTA; YouTube com 1-2 frases. Hashtags sem espaço, relevantes ao nicho."
     )
+    if transcript.strip():
+        body = f"Transcrição com tempos:\n{transcript[:150000]}"
+    else:
+        body = ("Este vídeo não tem fala (só música/efeitos, ou não tem áudio). Escolha trechos visuais fortes "
+                "distribuídos pelo vídeo com base no título e na descrição. A narração (voiceover) é obrigatória "
+                "em todos os cortes: 2-3 frases com informação e opinião, porque será a única fala do corte.")
     user = (
         f"Vídeo: {title}\nDuração: {duration:.0f}s\n"
-        f"Gere até {n} cortes entre {mn} e {mx} segundos, sem sobreposição, ordenados por viral_score.\n\n"
-        f"Transcrição com tempos:\n{transcript[:150000]}"
+        + (f"Descrição original: {description[:1500]}\n" if description else "")
+        + f"Gere até {n} cortes entre {mn} e {mx} segundos, sem sobreposição, ordenados por viral_score.\n\n"
+        + body
     )
     resp = _client().messages.parse(
         model=CLAUDE_MODEL,

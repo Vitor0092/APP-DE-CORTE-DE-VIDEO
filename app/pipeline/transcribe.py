@@ -5,6 +5,7 @@ import subprocess
 import numpy as np
 
 from ..config import WHISPER_MODEL
+from .media import has_audio
 
 SAMPLE_RATE = 16000
 
@@ -28,7 +29,9 @@ def load_audio(path: str) -> np.ndarray:
 
 
 def transcribe(path: str) -> list[dict]:
-    """Returns segments: [{start, end, text, words:[{start,end,word}]}]."""
+    """Returns segments: [{start, end, text, words:[{start,end,word}]}]. Empty if the video has no audio."""
+    if not has_audio(path):
+        return []
     model = _model()
     try:
         segments, _info = model.transcribe(load_audio(path), word_timestamps=True, vad_filter=True)
