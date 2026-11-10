@@ -9,6 +9,9 @@ from ..config import COOKIES_FILE, DOWNLOADS
 BOT_HINT = ("O YouTube bloqueou o download pelo servidor. Envie seu cookies.txt em Ajustes "
             "(ou envie o arquivo do vídeo direto no Painel) e clique em Tentar de novo.")
 
+COOKIES_EXPIRED = ("O YouTube recusou os cookies enviados (eles foram trocados pelo navegador). Exporte de novo "
+                   "usando uma janela anônima, como explicado em Ajustes, e clique em Tentar de novo.")
+
 
 def _opts(extra=None, cookies=True):
     o = {"quiet": True, "noplaylist": True}
@@ -56,6 +59,8 @@ def download(url: str, source_id: int) -> dict:
     if info is None:
         msg = str(last)
         if "not a bot" in msg or "Sign in to confirm" in msg:
+            if COOKIES_FILE.exists():
+                raise RuntimeError(COOKIES_EXPIRED) from last
             raise RuntimeError(BOT_HINT) from last
         if "Requested format is not available" in msg:
             raise RuntimeError("O YouTube não liberou nenhum formato de vídeo para o servidor. Tente de novo em alguns "

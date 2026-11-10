@@ -28,7 +28,7 @@ PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000").rstrip("
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-opus-5-5")
-WHISPER_MODEL = os.getenv("WHISPER_MODEL", "small")
+WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base")
 TTS_VOICE = os.getenv("TTS_VOICE", "pt-BR-AntonioNeural")
 
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY", "")

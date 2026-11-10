@@ -171,7 +171,11 @@ def _loop():
 
 
 def start():
-    # Anything left "processing"/"posting" after a restart goes back to the queue.
-    db.run("UPDATE sources SET status='queued' WHERE status='processing'")
+    # A video still "processing" at startup means the server restarted mid-job (often out of memory).
+    # Don't requeue it automatically, or a too-heavy video would crash the server in a loop.
+    db.run("UPDATE sources SET status='error', error=? WHERE status='processing'",
+           ("O processamento foi interrompido porque o servidor reiniciou (provavelmente faltou memória). "
+            "Clique em Tentar de novo; se repetir, tente um vídeo mais curto.",))
+    db.run("UPDATE clips SET status='error', error='Edição interrompida pelo reinício do servidor' WHERE status='rendering'")
     db.run("UPDATE posts SET status='scheduled' WHERE status='posting'")
     threading.Thread(target=_loop, daemon=True, name="hypecut-worker").start()

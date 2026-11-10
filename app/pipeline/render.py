@@ -96,7 +96,7 @@ def render_clip(clip_id: int, src: str, segments: list, start: float, end: float
         af, amap = "", "0:a?"
     cmd += [
         "-filter_complex", vf + af, "-map", "[v]", "-map", amap,
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-pix_fmt", "yuv420p",
+        "-c:v", "libx264", "-preset", "veryfast", "-threads", "2", "-crf", "21", "-pix_fmt", "yuv420p",
         "-c:a", "aac", "-b:a", "160k", "-r", "30", "-movflags", "+faststart", "final.mp4",
     ]
     res = subprocess.run(cmd, cwd=workdir, capture_output=True, text=True)

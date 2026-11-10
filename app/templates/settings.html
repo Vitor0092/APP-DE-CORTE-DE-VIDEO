@@ -25,8 +25,12 @@
 <section class="card stack" id="cookies"><h2>Login do YouTube (cookies)</h2>
 <p class="small muted">O YouTube às vezes bloqueia downloads feitos por servidores ("confirm you're not a bot"). Para liberar, envie os cookies de uma conta do YouTube.
 Use de preferência uma <b>conta secundária</b>.</p>
-<ol class="small muted"><li>No Chrome do PC, instale a extensão <b>Get cookies.txt LOCALLY</b>.</li>
-<li>Abra youtube.com logado nessa conta, clique na extensão e em <b>Export</b>.</li>
+<ol class="small muted">
+<li>No Chrome do PC, instale a extensão <b>Get cookies.txt LOCALLY</b> e permita que ela rode em janela anônima (Gerenciar extensão → Permitir no modo anônimo).</li>
+<li>Abra uma <b>janela anônima</b> e faça login no YouTube.</li>
+<li>Nessa mesma aba, abra <code>youtube.com/robots.txt</code>.</li>
+<li>Clique na extensão → <b>Export</b>.</li>
+<li><b>Feche a janela anônima</b> logo em seguida e não abra aquela sessão de novo. Se o navegador continuar usando a sessão, o YouTube invalida os cookies.</li>
 <li>Envie o arquivo aqui embaixo.</li></ol>
 <p class="small">Status: {% if cookies %}<span class="ok">● cookies enviados em {{cookies}}</span>{% else %}<span class="warn">nenhum cookie enviado</span>{% endif %}</p>
 <form method="post" action="/settings/cookies" enctype="multipart/form-data" class="stack">

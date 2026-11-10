@@ -1,6 +1,6 @@
 """Speech-to-text with word timestamps (faster-whisper, runs locally, free)."""
+import gc
 import subprocess
-from functools import lru_cache
 
 import numpy as np
 
@@ -9,10 +9,10 @@ from ..config import WHISPER_MODEL
 SAMPLE_RATE = 16000
 
 
-@lru_cache(maxsize=1)
 def _model():
+    # Loaded per video and freed afterwards so rendering has the RAM back.
     from faster_whisper import WhisperModel
-    return WhisperModel(WHISPER_MODEL, device="auto", compute_type="int8")
+    return WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8", cpu_threads=2)
 
 
 def load_audio(path: str) -> np.ndarray:
@@ -29,11 +29,16 @@ def load_audio(path: str) -> np.ndarray:
 
 def transcribe(path: str) -> list[dict]:
     """Returns segments: [{start, end, text, words:[{start,end,word}]}]."""
-    segments, _info = _model().transcribe(load_audio(path), word_timestamps=True, vad_filter=True)
-    out = []
-    for s in segments:
-        out.append({
-            "start": round(s.start, 2), "end": round(s.end, 2), "text": s.text.strip(),
-            "words": [{"start": w.start, "end": w.end, "word": w.word} for w in (s.words or [])],
-        })
-    return out
+    model = _model()
+    try:
+        segments, _info = model.transcribe(load_audio(path), word_timestamps=True, vad_filter=True)
+        out = []
+        for s in segments:
+            out.append({
+                "start": round(s.start, 2), "end": round(s.end, 2), "text": s.text.strip(),
+                "words": [{"start": w.start, "end": w.end, "word": w.word} for w in (s.words or [])],
+            })
+        return out
+    finally:
+        del model
+        gc.collect()
