@@ -19,7 +19,7 @@
 <label class="check"><input type="checkbox" name="discovery_enabled" {{'checked' if s.discovery_enabled=='1'}}> Buscar vídeos em alta periodicamente</label>
 <label class="check"><input type="checkbox" name="discovery_auto_create" {{'checked' if s.discovery_auto_create=='1'}}> Criar cortes automaticamente dos melhores</label>
 <label>Palavras-chave (vírgula)<input name="discovery_keywords" value="{{s.discovery_keywords}}"></label>
-<div class="row wrap"><label>Intervalo (min)<input type="number" name="discovery_interval_min" value="{{s.discovery_interval_min}}"></label>
+<div class="row wrap"><label>Intervalo (min) <span class="small">— cada busca gasta 100 da cota grátis de 10.000/dia por palavra-chave; um upload gasta 1.600</span><input type="number" name="discovery_interval_min" value="{{s.discovery_interval_min}}"></label>
 <label>Velocidade mínima (views/hora)<input type="number" name="discovery_min_velocity" value="{{s.discovery_min_velocity}}"></label></div>
 <button>Salvar</button></form>
 <section class="card stack" id="cookies"><h2>Login do YouTube (cookies)</h2>

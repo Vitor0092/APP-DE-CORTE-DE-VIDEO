@@ -37,9 +37,9 @@ CREATE TABLE IF NOT EXISTS discoveries (
 
 DEFAULT_SETTINGS = {
     "niche": "GTA 6",
-    "discovery_keywords": "GTA 6, GTA VI, GTA 6 trailer, GTA 6 gameplay, GTA 6 leak, GTA 6 novidades",
+    "discovery_keywords": "GTA 6, GTA VI, GTA 6 trailer, GTA 6 novidades",
     "discovery_enabled": "1",
-    "discovery_interval_min": "60",
+    "discovery_interval_min": "240",
     "discovery_auto_create": "0",
     "discovery_min_velocity": "5000",
     "require_approval": "1",
@@ -78,6 +78,11 @@ def init():
         c.executescript(SCHEMA)
         for k, v in DEFAULT_SETTINGS.items():
             c.execute("INSERT OR IGNORE INTO settings VALUES (?,?)", (k, v))
+        # Old defaults spent the whole free YouTube quota (10k units/day): each search costs 100.
+        c.execute("UPDATE settings SET value='240' WHERE key='discovery_interval_min' AND value='60'")
+        c.execute("UPDATE settings SET value=? WHERE key='discovery_keywords' AND value=?",
+                  (DEFAULT_SETTINGS["discovery_keywords"],
+                   "GTA 6, GTA VI, GTA 6 trailer, GTA 6 gameplay, GTA 6 leak, GTA 6 novidades"))
         if not c.execute("SELECT 1 FROM goals LIMIT 1").fetchone():
             c.executemany("INSERT INTO goals(name,metric,platform,target,period) VALUES (?,?,?,?,?)", DEFAULT_GOALS)
 
