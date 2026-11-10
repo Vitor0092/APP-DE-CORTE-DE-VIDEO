@@ -22,4 +22,16 @@
 <div class="row wrap"><label>Intervalo (min)<input type="number" name="discovery_interval_min" value="{{s.discovery_interval_min}}"></label>
 <label>Velocidade mínima (views/hora)<input type="number" name="discovery_min_velocity" value="{{s.discovery_min_velocity}}"></label></div>
 <button>Salvar</button></form>
+<section class="card stack" id="cookies"><h2>Login do YouTube (cookies)</h2>
+<p class="small muted">O YouTube às vezes bloqueia downloads feitos por servidores ("confirm you're not a bot"). Para liberar, envie os cookies de uma conta do YouTube.
+Use de preferência uma <b>conta secundária</b>.</p>
+<ol class="small muted"><li>No Chrome do PC, instale a extensão <b>Get cookies.txt LOCALLY</b>.</li>
+<li>Abra youtube.com logado nessa conta, clique na extensão e em <b>Export</b>.</li>
+<li>Envie o arquivo aqui embaixo.</li></ol>
+<p class="small">Status: {% if cookies %}<span class="ok">● cookies enviados em {{cookies}}</span>{% else %}<span class="warn">nenhum cookie enviado</span>{% endif %}</p>
+<form method="post" action="/settings/cookies" enctype="multipart/form-data" class="stack">
+<input type="file" name="cookies" accept=".txt,text/plain">
+<button>Enviar cookies</button></form>
+{% if cookies %}<form method="post" action="/settings/cookies/delete"><button class="sm danger">Apagar cookies</button></form>{% endif %}
+</section>
 {% endblock %}

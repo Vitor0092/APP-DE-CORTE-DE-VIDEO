@@ -18,6 +18,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = Path(os.getenv("DATA_DIR", BASE_DIR / "data"))
 DOWNLOADS = DATA_DIR / "downloads"
 CLIPS = DATA_DIR / "clips"
+COOKIES_FILE = DATA_DIR / "cookies.txt"
 for d in (DATA_DIR, DOWNLOADS, CLIPS):
     d.mkdir(parents=True, exist_ok=True)
 

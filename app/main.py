@@ -1,16 +1,17 @@
 import hmac
 import json
 import secrets
+import shutil
 from pathlib import Path
 
-from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
 from . import db, discovery, goals, worker
-from .config import ADMIN_PASSWORD, PLATFORMS, SECRET_KEY
+from .config import ADMIN_PASSWORD, COOKIES_FILE, DOWNLOADS, PLATFORMS, SECRET_KEY
 from .publishers import REGISTRY
 
 app = FastAPI(title="HypeCut")
@@ -94,6 +95,19 @@ def add_source(request: Request, urls: str = Form(...), notes: str = Form("")):
     for u in urls.split():
         if u.startswith("http"):
             worker.enqueue_source(u, notes=notes)
+    return RedirectResponse("/", 303)
+
+
+@app.post("/sources/upload")
+def upload_source(request: Request, files: list[UploadFile] = File(...), notes: str = Form("")):
+    for f in files:
+        if not f.filename:
+            continue
+        safe = "".join(ch for ch in Path(f.filename).name if ch.isalnum() or ch in "._- ")[:80] or "video.mp4"
+        dest = DOWNLOADS / f"upload_{secrets.token_hex(4)}__{safe}"
+        with dest.open("wb") as out:
+            shutil.copyfileobj(f.file, out, 1024 * 1024)
+        worker.enqueue_source(f"file://{dest}", origin="upload", notes=notes)
     return RedirectResponse("/", 303)
 
 
@@ -293,7 +307,12 @@ CHECKBOXES = {"discovery_enabled", "discovery_auto_create", "require_approval", 
 
 @app.get("/settings")
 def settings(request: Request):
-    return page(request, "settings", s={k: db.setting(k, "") for k in SETTING_KEYS}, platforms=PLATFORMS)
+    cookies = None
+    if COOKIES_FILE.exists():
+        from datetime import datetime
+        cookies = datetime.fromtimestamp(COOKIES_FILE.stat().st_mtime).strftime("%d/%m/%Y %H:%M")
+    return page(request, "settings", s={k: db.setting(k, "") for k in SETTING_KEYS}, platforms=PLATFORMS,
+                cookies=cookies)
 
 
 @app.post("/settings")
@@ -306,6 +325,20 @@ async def save_settings(request: Request):
             db.set_setting(k, ",".join(form.getlist(k)))
         elif k in form:
             db.set_setting(k, form.get(k))
+    return RedirectResponse("/settings?ok=1", 303)
+
+
+@app.post("/settings/cookies")
+async def save_cookies(request: Request, cookies: UploadFile = File(None), cookies_text: str = Form("")):
+    data = (await cookies.read()).decode("utf-8", "ignore") if cookies and cookies.filename else cookies_text
+    if data.strip():
+        COOKIES_FILE.write_text(data if data.endswith("\n") else data + "\n", encoding="utf-8")
+    return RedirectResponse("/settings?ok=1", 303)
+
+
+@app.post("/settings/cookies/delete")
+def delete_cookies(request: Request):
+    COOKIES_FILE.unlink(missing_ok=True)
     return RedirectResponse("/settings?ok=1", 303)
 
 

@@ -3,7 +3,12 @@
 <form method="post" action="/sources" class="stack">
 <textarea name="urls" rows="2" placeholder="Cole um ou mais links (YouTube, TikTok, Instagram, X, Twitch...) — um por linha" required></textarea>
 <input name="notes" placeholder="Opcional: instruções para a IA (ex.: foque no trecho do mapa, tom engraçado)">
-<button>Gerar cortes</button></form></section>
+<button>Gerar cortes</button></form>
+<details style="margin-top:.8rem"><summary>Ou envie o arquivo do vídeo (do celular ou PC)</summary>
+<form method="post" action="/sources/upload" enctype="multipart/form-data" class="stack" style="margin-top:.6rem">
+<input type="file" name="files" accept="video/*" multiple required>
+<input name="notes" placeholder="Opcional: título/assunto do vídeo e instruções para a IA">
+<button>Enviar e gerar cortes</button></form></details></section>
 
 <div class="grid4">
 <div class="card stat"><span>Posts publicados</span><b>{{totals.posts|fmt}}</b></div>
